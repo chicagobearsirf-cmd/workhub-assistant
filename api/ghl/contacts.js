@@ -14,22 +14,25 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch('https://rest.gohighlevel.com/v1/contacts/', {
+    const response = await fetch('https://services.leadconnectorhq.com/contacts/', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${ghlKey}`,
+        'Version': '2021-07-28',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ firstName, lastName, phone, email, locationId }),
     });
 
-    const data = await response.json();
-    console.log('[/api/ghl/contacts] GHL status:', response.status, JSON.stringify(data));
+    const responseText = await response.text();
+    console.log('GHL response status:', response.status);
+    console.log('GHL response body:', responseText);
 
     if (!response.ok) {
-      return res.status(response.status).json({ error: data.message || JSON.stringify(data) });
+      return res.status(response.status).json({ error: responseText });
     }
 
+    const data = JSON.parse(responseText);
     return res.status(200).json({ success: true, contact: data });
   } catch (err) {
     console.error('GHL fetch error:', err);
