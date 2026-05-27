@@ -14,14 +14,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch('https://services.leadconnectorhq.com/contacts/', {
+    const response = await fetch('https://rest.gohighlevel.com/v1/contacts/', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${ghlKey}`,
-        'Version': '2021-07-28',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ firstName, lastName, phone, email, locationId })
+      body: JSON.stringify({ firstName, lastName, phone, email, locationId }),
     });
 
     const data = await response.json();

@@ -99,11 +99,10 @@ app.post('/api/ghl/contacts', async (req, res) => {
   const { firstName, lastName, phone, email } = contactData
 
   try {
-    const ghlRes = await fetch('https://services.leadconnectorhq.com/contacts/', {
+    const ghlRes = await fetch('https://rest.gohighlevel.com/v1/contacts/', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'Version': '2021-07-28',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ firstName, lastName, phone, email, locationId }),
