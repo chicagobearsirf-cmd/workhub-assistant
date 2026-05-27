@@ -6,7 +6,7 @@
 export const clients = [
   {
     pin:          '1234',
-    locationId:   'LOCATION_ID_HERE',
+    locationId:   'okEW3b6G4mML42euecfK',
     businessName: 'Business Name',
   },
   {
