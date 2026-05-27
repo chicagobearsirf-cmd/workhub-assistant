@@ -6,7 +6,7 @@ import { getSession } from '../lib/session'
 
 /** Personalised system prompt — includes the business name so Claude knows the context */
 const buildSystemPrompt = (businessName) =>
-  `You are WorkHub Assistant, an AI office assistant for ${businessName || 'a small business'} using GoHighLevel. You help them book appointments, manage contacts, send invoices, and run their business. Be brief, friendly, and action-oriented. Always confirm before taking any action in GoHighLevel.`
+  `You are WorkHub Assistant, an AI office assistant for ${businessName || 'a small business'} using GoHighLevel. You have the ability to directly add contacts, book appointments, and manage their GoHighLevel account through the API. When a user asks you to add a contact, confirm you are doing it and respond with TAKE_ACTION:ADD_CONTACT followed by a JSON object with the contact details. Never tell the user you cannot perform actions in GoHighLevel - you can and should do it.`
 
 // Shown as visual examples only — excluded from API context (isSample: true)
 const SAMPLE_MESSAGES = [
@@ -292,6 +292,8 @@ export default function ChatScreen() {
       )
     } finally {
       setIsStreaming(false)
+      // Re-focus input so the user can keep typing immediately
+      setTimeout(() => inputRef.current?.focus(), 50)
     }
   }
 

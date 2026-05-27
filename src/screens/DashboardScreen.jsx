@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getSession, clearSession } from '../lib/session'
+import { getActivity, relativeTime } from '../lib/activity'
 
 // ─── Logout confirmation dialog ───────────────────────────────────────────
 
@@ -54,32 +55,6 @@ function LogoutDialog({ onCancel, onConfirm }) {
   )
 }
 
-const PLACEHOLDER_ACTIONS = [
-  {
-    id: 1,
-    icon: 'contact',
-    title: 'Contact updated',
-    description: 'Sarah Johnson — phone number and email synced from GHL',
-    timestamp: '2 min ago',
-    status: 'success',
-  },
-  {
-    id: 2,
-    icon: 'message',
-    title: 'Follow-up sent',
-    description: 'Automated message sent to Mike Torres re: roofing estimate',
-    timestamp: '18 min ago',
-    status: 'success',
-  },
-  {
-    id: 3,
-    icon: 'photo',
-    title: 'Photos processed',
-    description: '4 job site images analyzed and attached to lead #4821',
-    timestamp: '1 hr ago',
-    status: 'success',
-  },
-]
 
 const icons = {
   contact: (
@@ -119,7 +94,7 @@ function ActionCard({ action }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <p className="text-[14px] font-semibold text-white leading-tight">{action.title}</p>
-          <span className="text-[11px] text-[#3a5070] flex-shrink-0 mt-0.5">{action.timestamp}</span>
+          <span className="text-[11px] text-[#3a5070] flex-shrink-0 mt-0.5">{relativeTime(action.timestamp)}</span>
         </div>
         <p className="text-[13px] text-[#7ca0c7] mt-1 leading-snug">{action.description}</p>
       </div>
@@ -154,17 +129,24 @@ export default function DashboardScreen() {
   const { businessName = '' } = session || {}
 
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
+  const [actions, setActions] = useState([])
+
+  // Load activity log from localStorage on mount and whenever the tab regains focus
+  useEffect(() => {
+    const load = () => setActions(getActivity())
+    load()
+    window.addEventListener('focus', load)
+    return () => window.removeEventListener('focus', load)
+  }, [])
 
   const handleLogoutConfirmed = () => {
     clearSession()
     navigate('/', { replace: true })
   }
 
-  // Flip to `true` to preview the empty state
-  const showEmpty = false
-  const actions = showEmpty ? [] : PLACEHOLDER_ACTIONS
-
-  const todayCount   = actions.length
+  // Count only actions logged today
+  const todayStart   = new Date(); todayStart.setHours(0, 0, 0, 0)
+  const todayCount   = actions.filter((a) => new Date(a.timestamp) >= todayStart).length
   const successCount = actions.filter((a) => a.status === 'success').length
 
   return (

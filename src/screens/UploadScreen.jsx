@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import Toast from '../components/Toast'
 import { getSession } from '../lib/session'
+import { logActivity } from '../lib/activity'
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
@@ -383,6 +384,12 @@ export default function UploadScreen() {
       const name = [card.data.firstName, card.data.lastName].filter(Boolean).join(' ') || 'Contact'
       setCards((prev) => prev.map((c, i) => i === cardIndex ? { ...c, saving: false, saved: true } : c))
       showToast(`${name} saved to GoHighLevel!`, 'success')
+      logActivity({
+        icon:        'contact',
+        title:       'Contact added',
+        description: `${name} saved to GoHighLevel from photo upload`,
+        status:      'success',
+      })
     } catch (err) {
       setCards((prev) => prev.map((c, i) => i === cardIndex ? { ...c, saving: false } : c))
       showToast(`Save failed: ${err.message}`, 'error')
