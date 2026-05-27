@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const r = await fetch('https://services.leadconnectorhq.com/contacts/?limit=1', {
+    const r = await fetch('https://services.leadconnectorhq.com/contacts?limit=1', {
       headers: {
         'Authorization': `Bearer ${ghlKey}`,
         'Version': '2021-07-28',

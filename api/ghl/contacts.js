@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch('https://services.leadconnectorhq.com/contacts/', {
+    const response = await fetch('https://services.leadconnectorhq.com/contacts', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${ghlKey}`,
