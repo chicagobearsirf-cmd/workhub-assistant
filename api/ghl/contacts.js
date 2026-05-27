@@ -5,8 +5,7 @@ export default async function handler(req, res) {
 
   const ghlKey =
     process.env.GHL_API_KEY ||
-    process.env.VITE_GHL_API_KEY ||
-    process.env.GHL_API_KEY
+    process.env.VITE_GHL_API_KEY
 
   if (!ghlKey) {
     return res.status(500).json({ error: 'GHL API key not configured in environment' })

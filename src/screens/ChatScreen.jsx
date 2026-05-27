@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import RobotAvatar from '../components/RobotAvatar'
+import Toast from '../components/Toast'
 import { getSession } from '../lib/session'
+import { logActivity } from '../lib/activity'
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
@@ -34,6 +36,52 @@ const SAMPLE_MESSAGES = [
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
+
+/**
+ * Scan a completed assistant response for TAKE_ACTION:ADD_CONTACT {...}.
+ * Returns { data, cleanText } if found, or null.
+ * Uses brace-matching so nested JSON is handled correctly.
+ */
+function parseTakeAction(text) {
+  const marker = 'TAKE_ACTION:ADD_CONTACT'
+  const idx = text.indexOf(marker)
+  if (idx === -1) return null
+
+  const jsonStart = text.indexOf('{', idx + marker.length)
+  if (jsonStart === -1) return null
+
+  let depth = 0
+  let jsonEnd = -1
+  for (let i = jsonStart; i < text.length; i++) {
+    if (text[i] === '{') depth++
+    else if (text[i] === '}') { depth--; if (depth === 0) { jsonEnd = i; break } }
+  }
+  if (jsonEnd === -1) return null
+
+  try {
+    const data      = JSON.parse(text.slice(jsonStart, jsonEnd + 1))
+    // Strip the whole TAKE_ACTION block (marker + JSON) from the visible text
+    const cleanText = (text.slice(0, idx) + text.slice(jsonEnd + 1)).replace(/\n{3,}/g, '\n\n').trim()
+    return { data, cleanText }
+  } catch {
+    return null
+  }
+}
+
+/** Map fields from Claude's JSON → GHL contact payload */
+function toGHLPayload(data) {
+  const nameParts = [data.firstName, data.lastName].filter(Boolean)
+  return {
+    firstName: data.firstName || '',
+    lastName:  data.lastName  || '',
+    email:     data.email     || '',
+    phone:     data.phone     || '',
+    address1:  data.address   || '',
+    tags:      ['workhub-chat', ...(data.jobType ? [data.jobType] : [])],
+    source:    'WorkHub Assistant',
+    ...(nameParts.length ? { name: nameParts.join(' ') } : {}),
+  }
+}
 
 function now() {
   return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
@@ -139,16 +187,19 @@ function TypingIndicator() {
 
 export default function ChatScreen() {
   const session = getSession()
-  const { businessName = '' } = session || {}
+  const { businessName = '', locationId = '' } = session || {}
 
   const [messages,    setMessages]    = useState(SAMPLE_MESSAGES)
   const [input,       setInput]       = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [isListening, setIsListening] = useState(false)
+  const [toast,       setToast]       = useState(null) // { message, type }
   const bottomRef    = useRef(null)
   const inputRef     = useRef(null)
   const recognitionRef = useRef(null)
   const baseInputRef   = useRef('') // text typed before mic started
+
+  const showToast = useCallback((message, type = 'success') => setToast({ message, type }), [])
 
   // ── Speech recognition ───────────────────────────────────────────────────
   const SpeechRecognition =
@@ -268,14 +319,44 @@ export default function ChatScreen() {
         )
       })
 
-      // Finalise: remove streaming flag, add timestamp
+      // ── Detect TAKE_ACTION:ADD_CONTACT ──────────────────────────────────
+      const action      = parseTakeAction(fullText)
+      const displayText = action ? action.cleanText : fullText
+
+      // Finalise: remove streaming flag, strip action token, add timestamp
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistId
-            ? { ...m, text: fullText, streaming: false, timestamp: now() }
+            ? { ...m, text: displayText, streaming: false, timestamp: now() }
             : m
         )
       )
+
+      // Auto-save contact to GHL — fire-and-forget (non-blocking)
+      if (action?.data) {
+        ;(async () => {
+          try {
+            const r = await fetch('/api/ghl/contacts', {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({ ...toGHLPayload(action.data), locationId }),
+            })
+            const body = await r.json()
+            if (!r.ok || body.error) throw new Error(body.error || `GHL error ${r.status}`)
+
+            const name = [action.data.firstName, action.data.lastName].filter(Boolean).join(' ') || 'Contact'
+            showToast(`✅ ${name} added to GoHighLevel`, 'success')
+            logActivity({
+              icon:        'contact',
+              title:       'Contact added via chat',
+              description: `${name} added to GoHighLevel by assistant`,
+              status:      'success',
+            })
+          } catch (err) {
+            showToast(`GHL save failed: ${err.message}`, 'error')
+          }
+        })()
+      }
     } catch (err) {
       setMessages((prev) =>
         prev.map((m) =>
@@ -305,6 +386,10 @@ export default function ChatScreen() {
 
   return (
     <div className="flex flex-col h-full bg-[#050d1a]">
+
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      )}
 
       {/* Header */}
       <header className="flex-shrink-0 flex items-center gap-3 px-4 py-3.5 border-b border-[#152b55] bg-[#0a1628]">
