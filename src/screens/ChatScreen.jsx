@@ -68,18 +68,13 @@ function parseTakeAction(text) {
   }
 }
 
-/** Map fields from Claude's JSON → GHL contact payload */
+/** Map fields from Claude's JSON → the 5-field payload the contacts endpoint expects */
 function toGHLPayload(data) {
-  const nameParts = [data.firstName, data.lastName].filter(Boolean)
   return {
     firstName: data.firstName || '',
     lastName:  data.lastName  || '',
     email:     data.email     || '',
     phone:     data.phone     || '',
-    address1:  data.address   || '',
-    tags:      ['workhub-chat', ...(data.jobType ? [data.jobType] : [])],
-    source:    'WorkHub Assistant',
-    ...(nameParts.length ? { name: nameParts.join(' ') } : {}),
   }
 }
 
@@ -342,7 +337,13 @@ export default function ChatScreen() {
               body:    JSON.stringify({ ...toGHLPayload(action.data), locationId }),
             })
             const body = await r.json()
-            if (!r.ok || body.error) throw new Error(body.error || `GHL error ${r.status}`)
+            if (!r.ok || body.error) {
+              // body.error may be a string or an object — always produce a readable message
+              const errMsg = typeof body.error === 'string'
+                ? body.error
+                : body.error?.message || JSON.stringify(body.error) || `GHL error ${r.status}`
+              throw new Error(errMsg)
+            }
 
             const name = [action.data.firstName, action.data.lastName].filter(Boolean).join(' ') || 'Contact'
             showToast(`✅ ${name} added to GoHighLevel`, 'success')

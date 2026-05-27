@@ -25,10 +25,10 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+    console.log('[/api/ghl/contacts] GHL status:', response.status, JSON.stringify(data));
 
     if (!response.ok) {
-      console.error('GHL error:', data);
-      return res.status(response.status).json({ error: data });
+      return res.status(response.status).json({ error: data.message || JSON.stringify(data) });
     }
 
     return res.status(200).json({ success: true, contact: data });

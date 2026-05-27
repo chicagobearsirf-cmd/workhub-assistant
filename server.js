@@ -96,23 +96,27 @@ app.post('/api/ghl/contacts', async (req, res) => {
 
   const payload = { ...contactData, locationId }
 
+  const { firstName, lastName, phone, email } = contactData
+
   try {
-    const ghlRes = await fetch('https://rest.gohighlevel.com/v1/contacts/', {
+    const ghlRes = await fetch('https://services.leadconnectorhq.com/contacts/', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Version': '2021-07-28',
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ firstName, lastName, phone, email, locationId }),
     })
 
     const data = await ghlRes.json()
+    console.log('[/api/ghl/contacts] GHL response:', ghlRes.status, JSON.stringify(data))
 
     if (!ghlRes.ok) {
-      return res.status(ghlRes.status).json({ error: data.message || 'GHL API error', detail: data })
+      return res.status(ghlRes.status).json({ error: data.message || JSON.stringify(data) })
     }
 
-    res.json(data)
+    res.json({ success: true, contact: data })
   } catch (err) {
     console.error('[/api/ghl/contacts]', err.message)
     res.status(500).json({ error: err.message || 'Network error reaching GHL' })
