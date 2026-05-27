@@ -9,9 +9,12 @@ export const config = {
   },
 }
 
-const anthropic = new Anthropic({
-  apiKey: process.env.VITE_ANTHROPIC_API_KEY,
-})
+const apiKey =
+  process.env.ANTHROPIC_API_KEY ||
+  process.env.VITE_ANTHROPIC_API_KEY ||
+  process.env.ANTHROPIC_KEY
+
+const anthropic = new Anthropic({ apiKey })
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

@@ -3,9 +3,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const apiKey = process.env.VITE_GHL_API_KEY
+  const ghlKey =
+    process.env.GHL_API_KEY ||
+    process.env.VITE_GHL_API_KEY ||
+    process.env.GHL_API_KEY
 
-  if (!apiKey) {
+  if (!ghlKey) {
     return res.status(500).json({ error: 'GHL API key not configured in environment' })
   }
 
@@ -23,7 +26,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${ghlKey}`,
       },
       body: JSON.stringify(payload),
     })
